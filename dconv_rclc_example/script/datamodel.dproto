@@ -1,0 +1,25 @@
+algebraic position_named :: Scalar{X,Y,Z}
+algebraic position       :: Vector{3}
+ddr       ros_position   :: ROS {geometry_msgs/Point}
+units     position_units :: qudt, position_named {m=X, m=Y, m=Z}
+units     position_units2:: qudt, position {m=0,m=1,m=2}
+
+dproto semantic_ros_position :: geometry {
+  semantic  = Position
+  coord     = cartesian
+  algebraic = position_named
+  ddr       = ros_position
+  dr        = {x=X,y=Y,z=Z}
+  units     = position_units
+}
+
+dproto semantic_plain_position :: geometry {
+  semantic  = Position
+  coord     = cartesian
+  algebraic = position
+  ddr       = :: c99 {double[3]}
+  dr        = {0=0,1=1,2=2}
+  units     = :: qudt, position {m=0,m=1,m=2}
+}
+
+alias position_named <-> position {X = 0, Y = 1, Z = 2}
