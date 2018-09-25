@@ -16,12 +16,13 @@ int main(int argc, char** argv) {
     
     geometry_msgs__msg__Point* data = geometry_msgs__msg__Point__create();
     data->x = 1.0;
-    data->y = 1.0;
-    data->z = 1.0;
+    data->y = 2.0;
+    data->z = 6.6;
     
     sleep(2.0);
     while(rclc_ok()) {
       printf("Publishing\n");
+      data->x = data->x +0.1;
       rclc_publish(publisher, data);
       sleep(1.0);
     }
