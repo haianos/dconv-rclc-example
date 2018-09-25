@@ -5,21 +5,26 @@ ddr_models = {ros2=true}
 dconv.init_runtime(dprotofile,ddr_models)
 
 --[[ Utilities of the runtime --]]
-local dblx = {}
+-- NOTE to users: do not change the above.
+-- It will be merged as Lua module.
+local dblx   = {}
+local ctypes = {} --caching ctype name resolution from ddr
 
 --register data pointers as dblx
 function register_dblx(dprotoname,id,cdata)
-  dblx[id] = dconv.create_reference(dprotoname,cdata)
+  dblx[id]  = dconv.create_reference(dprotoname,cdata)
+  local ddr  = dblx[id].dproto.ddr
+  ctypes[id] = dconv.get_ctype(ddr)  -- caching ctype
 end
 
 function get_dblx(id)
-  return dblx[id]
+  return dblx[id].dblx
 end
 
-function change_pointer(id,ud)
+function change_ref(id,ud)
   local data = ud
   if type(ud) == 'userdata' then
-     data = ffi.cast('geometry_msgs__msg__Point*',ud)
+    data = ffi.cast(ctypes[id],ud)
   end
   dblx[id].dblx = ffi.cast(ffi.typeof(data),data)
 end

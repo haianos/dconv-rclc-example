@@ -29,9 +29,6 @@
 //The ROS2 message we want to receive
 #include <geometry_msgs/msg/point.h>
 
-//This is just used to get environment vars
-#include <rcutils/get_env.h>
-
 //Lua5.2 -- needed for the runtime
 #include <lua.h>
 #include <lauxlib.h>
@@ -152,24 +149,34 @@ double* get_internal_userdata(const char* id) {
 }
 
 void set_reference(lua_State* L,const char* id,void* ref) {
-  lua_getglobal(L,"change_pointer");
+  lua_getglobal(L,"change_ref");
   lua_pushstring(L,id);
   lua_pushlightuserdata(L,ref);
   lua_call(L,2,0);
 }
 
 /* ROS CALLBACK -- where the host code resides */
-
+/* FROM HERE ON, IT'S USER-CODE. The previous will be shipped as external source/library */
 void callback(const void* msg) {
   set_reference(L,"incoming",msg);                      //this sets the reference to the dblx 'incoming', previously unbounded
   execute_string(L,"convert('incoming','internal')");  //this inkoves the conversion
   printf("USER: %f %f %f\n",internal_userdata[0],internal_userdata[1],internal_userdata[2]); //data converted with indicated ddr (double[3]), ready to be used in the user-code (component's internals)
 }
 
+void helper() {
+  printf("Simple subscriber example with dconv integrated in host code\n");
+  printf("run as: <arg1> <arg2>, where\n");
+  printf("  - arg1: .dproto file\n");
+  printf("  - arg2: init script (.lua)\n");
+}
 
 int main(int argc, char** argv) {
   printf("Starting up...\n");
   
+  if (argc != 3){
+    helper();
+    return -1;
+  }
   /* init ROS  */
   rclc_init(0, NULL);
   rclc_node_t* node = rclc_create_node("subnode", "/ns");
@@ -177,26 +184,15 @@ int main(int argc, char** argv) {
   /* init Lua  */
   L = init_lua();
   
-  const char* env_value;
-  const char* error_str;
-  error_str = rcutils_get_env("DCONV", &env_value);
-  if (error_str != NULL) {
-   fprintf(stderr, "Error getting env var: %s\n", error_str);
-  }
-  printf("Valued of 'DCONV': %s\n", env_value);
+  push_datamodel(L,argv[1]);
+  execute_file(L,argv[2]);
   
-  char initscript[256];
-  strcat(initscript,env_value);
-  strcat(initscript,"/testing.lua\0");
-  printf("initscript %s\n", initscript);
-  
-  push_datamodel(L,"/home/haianos/ros2_ws/src/dconv_rclc_example/dconv_rclc_example/script/datamodel.dproto");
-  execute_file(L,"/home/haianos/ros2_ws/src/dconv_rclc_example/dconv_rclc_example/script/init-dconv.lua");
-//   execute_file(L,initscript);
-  
-  register_dblx("semantic_ros_position","incoming",NULL);
+  /* Registering DBLX */
+  //                   DPROTO MODEL       DBLX ID   POINTER TO DATA; provided by the callback
+  register_dblx("semantic_ros_position","incoming",NULL);  //NOTE: avoid using `incoming` until data is registered
   double mydata[3];
   internal_userdata = &mydata;//(double*)malloc(sizeof(double)*3); //double[3]
+  // we fully bound 'internal_userdata' in this example, no need of extra steps per message arrived.
   register_dblx("semantic_plain_position","internal",(void*)internal_userdata);
   printf("STARTED\n");
   
