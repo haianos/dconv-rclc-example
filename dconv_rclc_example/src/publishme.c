@@ -21,8 +21,9 @@ int main(int argc, char** argv) {
     
     sleep(2.0);
     while(rclc_ok()) {
-      printf("Publishing\n");
       data->x = data->x +0.1;
+      data->z = data->z -0.1;
+      printf("Publishing: [x: %f,y: %f,z: %f]\n",data->x,data->y,data->z);
       rclc_publish(publisher, data);
       sleep(1.0);
     }

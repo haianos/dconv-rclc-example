@@ -1,14 +1,11 @@
-print('loading file')
-
-inspect=require('inspect')
+print('LOADING RUNTIME')
 
 dconv=require('dproto-conv-gen')
 ddr_models = {ros2=true}
 dconv.init_runtime(dprotofile,ddr_models)
-DDBLX = dconv.DDBLX
 
 --[[ Utilities of the runtime --]]
-dblx = {}
+local dblx = {}
 
 --register data pointers as dblx
 function register_dblx(dprotoname,id,cdata)
@@ -20,7 +17,18 @@ function get_dblx(id)
 end
 
 function change_pointer(id,ud)
-  dblx[id].dblx = ffi.cast(ffi.typeof(ud),ud)
+  local data = ud
+  if type(ud) == 'userdata' then
+     data = ffi.cast('geometry_msgs__msg__Point*',ud)
+  end
+  dblx[id].dblx = ffi.cast(ffi.typeof(data),data)
 end
 
-print('looping')
+function convert(src,tgt)
+  local src = dblx[src]
+  local tgt = dblx[tgt]
+  dconv.convert(src,tgt)
+end
+  
+  
+print('RUNTIME READY')
